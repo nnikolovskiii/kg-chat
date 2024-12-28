@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "yago-chat"
+version = "0.1.0"
+description = ""
+authors = ["Nikola Nikolovski <nikolovski.nikola42@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+rdflib = "^7.1.1"
+pymongo = ">=4.9,<4.10"
+pydantic = "^2.10.3"
+motor = "^3.6.0"
+python-dotenv = "^1.0.1"
+qdrant-client = "^1.12.1"
+requests = "^2.32.3"
+huggingface-hub = "^0.26.5"
+openai = "^1.57.4"
+langchain-core = "^0.3.25"
+langchain-text-splitters = "^0.3.3"
+sparqlwrapper = "^2.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
