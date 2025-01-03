@@ -1,15 +1,20 @@
+import asyncio
 import uuid
 from typing import List, Dict, Any, Optional, TypeVar, Callable, Awaitable, Tuple
 
+from aiohttp import payload_type
 from qdrant_client.async_qdrant_client import AsyncQdrantClient
 from qdrant_client import models
 from typing import Type as TypingType
 
-from yago_chat.llms.openai_embedding import embedd_content_with_model
 from pydantic import BaseModel
+from qdrant_client.conversions import common_types as types
 from dotenv import load_dotenv
 import os
 from qdrant_client.http.models import Record
+
+from yago_chat.llms.openai_embedding import embedd_content_with_model
+
 
 class SearchOutput(BaseModel):
     score: float
@@ -143,7 +148,10 @@ class QdrantDatabase:
                 with_vectors=with_vectors,
             )
             records = response[0]
-            await function(records)
+            if len(records) != 0:
+                await function(records)
+            else:
+                print("MUSTAAAAAAAAAAAAAARD")
             offset = response[-1]
             if offset is None:
                 break
@@ -204,6 +212,8 @@ class QdrantDatabase:
     async def update_points(
         self, collection_name: str, ids: List[str], update: Dict[str, Any]
     ):
+        print(ids)
+        print(update)
         await self.client.set_payload(
             collection_name=collection_name,
             wait=True,

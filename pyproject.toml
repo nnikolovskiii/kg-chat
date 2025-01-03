@@ -19,6 +19,9 @@ openai = "^1.57.4"
 langchain-core = "^0.3.25"
 langchain-text-splitters = "^0.3.3"
 sparqlwrapper = "^2.0.0"
+bs4 = "^0.0.2"
+aiohttp = "^3.11.11"
+html2text = "^2024.2.26"
 
 
 [build-system]

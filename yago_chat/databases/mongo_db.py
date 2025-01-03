@@ -5,11 +5,10 @@ from copy import deepcopy
 from bson import ObjectId
 from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
-from typing import Optional, Any, List, Dict, TypeVar, Set
+from typing import Optional, Any, List, Dict, TypeVar, Set, AsyncGenerator
 from typing import Type as TypingType
 from dotenv import load_dotenv
 from pymongo.errors import DuplicateKeyError, ConnectionFailure
-
 
 class MongoEntry(BaseModel):
     id: Optional[str] = None
@@ -83,6 +82,35 @@ class MongoDBDatabase:
             results.append(entry)
 
         return results
+
+    async def stream_entries(
+            self,
+            class_type: TypingType[T],
+            doc_filter: Dict[str, Any] = None,
+            collection_name: Optional[str] = None,
+    ) -> AsyncGenerator[T, None]:
+        collection_name = class_type.__name__
+        collection = self.db[collection_name]
+
+        cursor = collection.find(doc_filter or {})
+
+        async for doc in cursor:
+            doc['id'] = str(doc.pop('_id'))
+            entry = class_type.model_validate(doc)
+            yield entry
+
+    async def stream_entries_dict(
+            self,
+            doc_filter: Dict[str, Any] = None,
+            collection_name: Optional[str] = None,
+    ) -> AsyncGenerator[Dict[str, any], None]:
+        collection = self.db[collection_name]
+
+        cursor = collection.find(doc_filter or {})
+
+        async for doc in cursor:
+            doc['id'] = str(doc.pop('_id'))
+            yield doc
 
     async def get_entries_dict(
             self,
@@ -165,6 +193,26 @@ class MongoDBDatabase:
 
         return None
 
+    async def get_entry_from_col_value_dict(
+            self,
+            column_name: str,
+            column_value: str,
+            collection_name: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        collection = self.db[collection_name]
+
+        query = {column_name: column_value}
+
+        document = await collection.find_one(query)
+
+        if document:
+            attr_dict = {key: value for key, value in document.items()}
+            attr_dict["id"] = str(document["_id"])
+
+            return attr_dict
+
+        return None
+
     async def update_entry(
             self,
             entity: MongoEntry,
@@ -227,3 +275,27 @@ class MongoDBDatabase:
         collection = self.db[collection_name]
         result = await collection.delete_many(doc_filter or {})
         return result.deleted_count
+
+    async def count_entries(
+            self,
+            class_type: TypingType[T],
+            doc_filter: Dict[str, Any] = None,
+            collection_name: Optional[str] = None,
+    ) -> int:
+        collection_name = class_type.__name__ if collection_name is None else collection_name
+        collection = self.db[collection_name]
+        return await collection.count_documents(doc_filter or {})
+
+    async def create_index(
+            self,
+            field_name: str,
+            class_type: TypingType[T],
+            collection_name: Optional[str] = None,
+    ):
+        try:
+            collection_name = class_type.__name__ if collection_name is None else collection_name
+            collection = self.db[collection_name]
+            await collection.create_index(field_name)
+            print("Index created successfully.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
