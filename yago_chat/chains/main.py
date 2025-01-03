@@ -1,5 +1,6 @@
 import asyncio
 
+from yago_chat.chains.generate_answer import generate_answer
 from yago_chat.chains.guess_wikidata import guess_wikidata
 from yago_chat.databases.singletons import get_qdrant_db
 from yago_chat.llms.generic_chat import generic_chat
@@ -32,22 +33,39 @@ async def main_flow(
         chunk_overlap=100,
     )
 
-    for link in links:
-        wikipedia_content = await get_wikipedia_page_markdown(url=link)
-        chunks = text_splitter.split_text(text=wikipedia_content)
+    # for link in links:
+    #     wikipedia_content = await get_wikipedia_page_markdown(url=link)
+    #     chunks = text_splitter.split_text(text=wikipedia_content)
+    #
+    #     for i,chunk in enumerate(chunks):
+    #         chunk_obj = WikipediaChunk(
+    #             content=chunk,
+    #             url=link,
+    #             order=i
+    #         )
+    #         await qdb.embedd_and_upsert_record(
+    #             value=chunk_obj.content,
+    #             entity=chunk_obj,
+    #         )
 
-        for i,chunk in enumerate(chunks):
-            chunk_obj = WikipediaChunk(
-                content=chunk,
-                url=link,
-                order=i
-            )
-            await qdb.embedd_and_upsert_record(
-                value=chunk_obj.content,
-                entity=chunk_obj,
-            )
+    raw_response_chunks = text_splitter.split_text(text=raw_response)
+    context = ""
+    for chunk in raw_response_chunks:
+        relevant_li = await qdb.retrieve_similar_entries(
+            value=chunk,
+            class_type=WikipediaChunk,
+            score_threshold=0.5,
+            top_k=5,
+        )
+        for elem in relevant_li:
+            context += elem.content + "\n"
 
-    print(links)
-    return ""
+    answer = await generate_answer(
+        question=question,
+        context=context
+    )
+
+    print(answer)
+    return answer
 
 asyncio.run(main_flow("What did Einstein contribute in the field of physics?"))

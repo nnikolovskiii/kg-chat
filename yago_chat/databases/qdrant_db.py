@@ -116,7 +116,7 @@ class QdrantDatabase:
 
     ) -> List[T]:
         collection_name = class_type.__name__ if collection_name is None else collection_name
-        field_condition = QdrantDatabase._generate_filter(filters=filter)
+        field_condition = QdrantDatabase._generate_filter(filters=filter) if filter else None
         vector = await embedd_content_with_model(value)
 
         points =  await self.client.search(
